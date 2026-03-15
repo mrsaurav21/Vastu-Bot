@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+motor
+pydantic
+opencv-python
+numpy
+python-multipart
+python-dotenv
+
+Folder,
+backend/,.env,Stores Database Link & Google ID
+config/,db.py,Connects to MongoDB Atlas
+services/,ai_logic.py,OpenCV Wall Detection Logic
+routes/,auth.py,Google Login Endpoint
+routes/,converter.py,Image Upload & 3D Processing
+backend/,main.py,Starts the Server & Plugs in Routes
