@@ -2,41 +2,60 @@ import { useFrame } from '@react-three/fiber';
 import { useKeyboardControls } from '@react-three/drei';
 import * as THREE from 'three';
 
+// Pre-allocate vectors to prevent garbage collection lag
+const moveVector = new THREE.Vector3();
+const sideVector = new THREE.Vector3();
+const direction = new THREE.Vector3();
+
 const Movement = ({ mode = 'walk' }) => {
   const [, getKeys] = useKeyboardControls();
-  const speed = 0.2; // Slightly faster for better feel
 
-  useFrame((state) => {
-    const { forward, backward, left, right } = getKeys();
+  useFrame((state, delta) => {
+    const { forward, backward, left, right, up, down } = getKeys();
     const { camera } = state;
 
-    // Only run movement logic if a key is actually being pressed
-    if (!forward && !backward && !left && !right) return;
+    // 1. CALCULATE HORIZONTAL MOVEMENT (WASD)
+    // This logic translates camera-facing direction into floor-plane movement
+    if (forward || backward || left || right) {
+      const speed = mode === 'walk' ? 15 : 50; // Boost speed for top view
+      const moveDistance = speed * delta;
 
-    if (mode === 'walk') {
-      // --- FIRST PERSON MOVEMENT ---
-      // translateZ/X move relative to the camera's current rotation
-      const moveZ = (Number(backward) - Number(forward)) * speed;
-      const moveX = (Number(right) - Number(left)) * speed;
+      // Get the camera's forward direction projected onto the XZ plane (the floor)
+      camera.getWorldDirection(direction);
+      direction.y = 0; // Lock movement to the floor
+      direction.normalize();
 
-      camera.translateZ(moveZ);
-      camera.translateX(moveX);
+      // Get the camera's rightward direction
+      sideVector.set(0, 1, 0).cross(direction).normalize();
+
+      // Combine inputs
+      moveVector.set(0, 0, 0);
+      if (forward) moveVector.add(direction);
+      if (backward) moveVector.sub(direction);
+      if (left) moveVector.add(sideVector);
+      if (right) moveVector.sub(sideVector);
+
+      moveVector.normalize().multiplyScalar(moveDistance);
+
+      // Apply to camera position
+      camera.position.add(moveVector);
+    }
+
+    // 2. CALCULATE VERTICAL MOVEMENT (Arrows)
+    if (up || down) {
+      const vertSpeed = 30;
+      const vertDistance = vertSpeed * delta;
       
-      // Force the height to stay at eye-level (2 units up from floor)
-      camera.position.y = 2; 
-    } else {
-      // --- TOP VIEW MOVEMENT ---
-      // In top view, we move along the global X and Z axis 
-      // because the camera is pointed straight down (-Y)
-      const moveZ = (Number(backward) - Number(forward)) * speed;
-      const moveX = (Number(right) - Number(left)) * speed;
+      // Pure vertical lift/drop
+      camera.position.y += (Number(up) - Number(down)) * vertDistance;
+    }
 
-      camera.position.z += moveZ;
-      camera.position.x += moveX;
-      
-      // Ensure the camera stays at "Bird's Eye" height and looks flat down
-      camera.position.y = 20; 
-      camera.rotation.set(-Math.PI / 2, 0, 0);
+    // 3. EYE-LEVEL ENFORCEMENT
+    // In walk mode, if not flying, stay at 1.5m. In top mode, stay above the floor.
+    if (mode === 'walk' && !up && !down) {
+      camera.position.y = THREE.MathUtils.lerp(camera.position.y, 1.5, 0.1);
+    } else if (camera.position.y < 0.5) {
+      camera.position.y = 0.5; // Floor collision safety
     }
   });
 

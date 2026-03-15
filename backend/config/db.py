@@ -1,26 +1,26 @@
 import os
-import sys
+import certifi
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
-# Load environment variables from the .env file at the project root
+# Load environment variables
 load_dotenv()
 
 MONGO_URI = os.getenv("MONGO_URI")
 
 def get_db_client():
     """
-    Initializes the MongoDB client and verifies the connection via a ping.
+    Initializes the MongoDB client with secure SSL certificates using certifi.
     """
     if not MONGO_URI:
         print("Error: MONGO_URI not found in environment variables.")
         return None
 
     try:
-        # tlsAllowInvalidCertificates=True handles local SSL/CA certificate issues
+        # Using certifi.where() provides the correct CA bundle for secure SSL handshakes
         client = MongoClient(
             MONGO_URI, 
-            tlsAllowInvalidCertificates=True,
+            tlsCAFile=certifi.where(),
             serverSelectionTimeoutMS=5000
         )
         
@@ -30,7 +30,7 @@ def get_db_client():
         return client
         
     except Exception as e:
-        print(f"MongoDB Atlas: connection failed. Error: {e}")
+        print(f"MongoDB Atlas: Connection failed. Error: {e}")
         return None
 
 # --- DATABASE AND COLLECTION INITIALIZATION ---
@@ -40,15 +40,16 @@ _client = get_db_client()
 
 if _client is not None:
     # Set the database name
-    db = _client["interior_design_db"]
+    db = _client["vastu_bot_db"]
     
     # Define and export collections
     users_collection = db["users"]
-    designs_collection = db["designs"]
     projects_collection = db["projects"]
+    
+    # Optional: kept for backward compatibility if used elsewhere
+    designs_collection = db["projects"] 
 else:
-    # Prevent the application from running if the database is unreachable
-    print("Critical: Database connection could not be established. Exiting.")
+    print("Critical: Database connection could not be established.")
     users_collection = None
-    designs_collection = None
     projects_collection = None
+    designs_collection = None

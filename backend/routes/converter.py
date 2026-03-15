@@ -1,20 +1,20 @@
-import uuid
-from datetime import datetime
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from services.ai_logic import detect_walls_from_image
-from config.db import projects_collection
+
+# Removed the database and uuid imports since we aren't saving here anymore!
 
 router = APIRouter()
 
 class BlueprintRequest(BaseModel):
     image: str
-    user_email: str = "guest" # Optional: track which user uploaded it
+    user_email: str = "guest" 
 
 @router.post("/convert")
 async def convert_blueprint(request: BlueprintRequest):
     """
-    Processes a 2D blueprint image into 3D wall coordinates and saves to the database.
+    Processes a 2D blueprint image into 3D wall coordinates.
+    DOES NOT SAVE TO DATABASE.
     """
     if not request.image:
         raise HTTPException(
@@ -26,21 +26,7 @@ async def convert_blueprint(request: BlueprintRequest):
         # 1. AI Processing Service
         walls = detect_walls_from_image(request.image)
         
-        # 2. Prepare Data for Database
-        project_id = str(uuid.uuid4())
-        project_data = {
-            "project_id": project_id,
-            "user_email": request.user_email,
-            "timestamp": datetime.utcnow(),
-            "wall_count": len(walls),
-            "walls": walls,
-            "status": "success" if walls else "empty"
-        }
-
-        # 3. Save to MongoDB Atlas (Persistent History)
-        projects_collection.insert_one(project_data)
-
-        # 4. Success Response
+        # 2. Response
         if not walls:
             return {
                 "status": "empty",
@@ -50,7 +36,6 @@ async def convert_blueprint(request: BlueprintRequest):
             
         return {
             "status": "success",
-            "project_id": project_id,
             "wall_count": len(walls),
             "walls": walls
         }

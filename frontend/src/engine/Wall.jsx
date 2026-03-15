@@ -1,40 +1,49 @@
 import React from 'react';
 
-const Wall = ({ start, end }) => {
-  // Standard architectural measurements (can be adjusted)
-  const height = 3.0;      // 3 meters high
-  const thickness = 0.2;   // 20cm thick
+const Wall = ({ data }) => {
+  if (!data) return null;
 
-  // 1. Calculate the center point (Midpoint formula)
-  // The 2D image 'y' axis translates to the 3D 'z' axis (depth)
-  const midX = (start.x + end.x) / 2;
-  const midZ = (start.y + end.y) / 2; 
+  // Extract coordinates directly from the AI data
+  const sx = Number(data?.start?.x ?? data?._raw?.x1 ?? 0);
+  const sy = Number(data?.start?.y ?? data?._raw?.y1 ?? 0);
+  const ex = Number(data?.end?.x   ?? data?._raw?.x2 ?? 0);
+  const ey = Number(data?.end?.y   ?? data?._raw?.y2 ?? 0);
 
-  // 2. Calculate the length of the wall (Distance formula)
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const length = Math.sqrt(dx * dx + dy * dy);
+  // THE SCALE FIX: 
+  // Python already shrunk the numbers. We just use 1.5 to make it look great on our grid.
+  const m = 1.5; 
+  
+  const x1 = sx * m;
+  const z1 = sy * m; 
+  const x2 = ex * m;
+  const z2 = ey * m;
 
-  // 3. Calculate the rotation angle
-  // Negative atan2 is used because Three.js Y-axis rotation goes counter-clockwise
-  const angle = -Math.atan2(dy, dx);
+  // MATH
+  const midX = (x1 + x2) / 2;
+  const midZ = (z1 + z2) / 2; 
+  
+  const dx = x2 - x1;
+  const dz = z2 - z1;
+  const length = Math.sqrt(dx * dx + dz * dz);
+
+  // Hide impossible walls
+  if (isNaN(length) || length <= 0.1) return null;
+
+  const angle = -Math.atan2(dz, dx);
 
   return (
     <mesh 
-      position={[midX, height / 2, midZ]} 
+      position={[midX, 1.5, midZ]} 
       rotation={[0, angle, 0]}
-      castShadow 
+      castShadow
       receiveShadow
     >
-      {/* The box geometry shapes the wall */}
-      <boxGeometry args={[length, height, thickness]} />
-      
-      {/* The material gives it a matte, realistic finish */}
+      <boxGeometry args={[length, 3, 0.3]} />
       <meshStandardMaterial 
-        color="#e5e7eb" // Light gray to contrast with the dark theme Canvas
-        roughness={0.9} 
-        metalness={0.0} 
-      />
+  color="#ffffff" 
+  roughness={0.9} // Higher roughness makes it look like flat white paint
+  metalness={0} 
+/>
     </mesh>
   );
 };
