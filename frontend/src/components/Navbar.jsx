@@ -7,7 +7,12 @@ import { loginWithGoogle } from '../services/api';
 
 const Navbar = () => {
   const location = useLocation();
-  const { user, isAuthenticated, setUser, logout } = useDesignStore();
+
+  // --- FIXED ZUSTAND SELECTORS ---
+  const user = useDesignStore((state) => state.user);
+  const isAuthenticated = useDesignStore((state) => state.isAuthenticated);
+  const setUser = useDesignStore((state) => state.setUser);
+  const logout = useDesignStore((state) => state.logout);
 
   const isActive = (path) => location.pathname === path;
 
@@ -15,11 +20,14 @@ const Navbar = () => {
   const handleLoginSuccess = async (credentialResponse) => {
     try {
       const result = await loginWithGoogle(credentialResponse.credential);
-      if (result.status === "success") {
-        setUser(result.user); // Save to Zustand store
+      
+      // result.user contains name, email, picture from backend
+      if (result && result.status === "success") {
+        setUser(result.user); 
+        console.log("Login Success: User saved to store.");
       }
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error("Login failed at Navbar:", error);
     }
   };
 
@@ -36,8 +44,8 @@ const Navbar = () => {
         <div className="w-8 h-8 bg-gradient-to-tr from-orange-500 to-amber-400 rounded-lg flex items-center justify-center shadow-lg shadow-orange-900/20 group-hover:scale-105 transition-transform">
           <Hexagon className="w-5 h-5 text-white" />
         </div>
-        <span className="font-bold text-lg tracking-widest text-gray-100 group-hover:text-white transition-colors">
-          VASTU-BOT
+        <span className="font-bold text-lg tracking-widest text-gray-100 group-hover:text-white transition-colors uppercase">
+          Vastu-Bot
         </span>
       </Link>
 
@@ -77,12 +85,18 @@ const Navbar = () => {
 
         {/* Auth Section */}
         <div className="pl-4 border-l border-gray-800 ml-2">
-          {isAuthenticated ? (
+          {isAuthenticated && user ? (
             <div className="flex items-center space-x-4">
+              <div className="text-right hidden sm:block">
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Welcome,</p>
+                <p className="text-[11px] text-white font-black truncate max-w-[100px] uppercase">
+                  {user.name.split(' ')[0]}
+                </p>
+              </div>
               <img 
                 src={user.picture} 
                 alt="Profile" 
-                className="w-8 h-8 rounded-full border border-orange-500/50"
+                className="w-8 h-8 rounded-full border border-orange-500/50 hover:border-orange-400 transition-colors cursor-pointer"
               />
               <button 
                 onClick={handleLogout}
@@ -97,9 +111,9 @@ const Navbar = () => {
               <GoogleLogin
                 onSuccess={handleLoginSuccess}
                 onError={() => console.log('Login Failed')}
-                useOneTap
                 theme="filled_black"
                 shape="pill"
+                text="signin_with"
               />
             </div>
           )}
