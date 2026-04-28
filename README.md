@@ -1,6 +1,7 @@
 Python :-  uvicorn main:app --reload
 React:- npm run dev
-
+sharmashreshthi7303
+rG411pPqjAyyMY4C
 # Phase 1
 src/services/api.js
 src/pages/Home.jsx
